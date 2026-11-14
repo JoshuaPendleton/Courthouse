@@ -3,85 +3,172 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" content="#090e18" />
+  <meta name="theme-color" content="#08101E" />
   <meta name="description" content="Courthouse — authorized local AI model red-team assessment and evidence reporting." />
-  <title>Courthouse — Local AI Security Testing</title>
+  <title>Courthouse — AI Pen-Test Command Center</title>
   <link rel="stylesheet" href="/style.css" />
   <script defer src="/app.js"></script>
 </head>
 <body>
-  <div class="shell">
-    <aside class="sidebar">
-      <a class="brand" href="#overview" aria-label="Courthouse home"><span class="brand-emblem">⬡</span><span>Courthouse</span></a>
-      <nav aria-label="Main navigation">
-        <a href="#overview" class="nav-item selected"><span class="nav-icon">◈</span> Overview</a>
-        <a href="#assessment" class="nav-item"><span class="nav-icon">⌁</span> New assessment</a>
-        <a href="#results" class="nav-item"><span class="nav-icon">▤</span> Reports</a>
-      </nav>
-      <div class="sidebar-bottom">
-        <div class="side-status"><span class="live-dot"></span><div><strong>Courthouse Stress Test</strong><small id="sidebar-engine">3 hosted models loading</small></div></div>
-        <div class="version">Courthouse <span>HOSTED GGUF RED TEAM · v0.7</span></div>
-      </div>
-    </aside>
+  <header class="topnav">
+    <a class="brand" href="#arena" aria-label="Courthouse home">
+      <svg class="brand-icon" viewBox="0 0 40 40" aria-hidden="true">
+        <path class="hex" d="M20 2.5 35.2 11.25v17.5L20 37.5 4.8 28.75v-17.5Z"/>
+        <path class="pillars" d="M20 10 11 14.5V16h18v-1.5L20 10Zm-7 7.5h2v8h-2zm4 0h2v8h-2zm4 0h2v8h-2zm4 0h2v8h-2zM11 27h18v2H11z"/>
+      </svg>
+      <span>COURTHOUSE</span>
+    </a>
+    <nav class="nav-links" aria-label="Main navigation">
+      <a href="#arena" class="nav-item selected">Dashboard</a>
+      <a href="#results" class="nav-item">Testing History</a>
+      <a href="#docs" class="nav-item" data-placeholder="Documentation">Documentation</a>
+      <a href="#pricing" class="nav-item" data-placeholder="Pricing">Pricing</a>
+      <a href="#signin" class="signin-btn" data-placeholder="Sign in">Sign In</a>
+    </nav>
+  </header>
 
-    <main class="main">
-      <header class="topbar">
-        <div class="breadcrumb"><strong>Courthouse</strong></div>
-      </header>
-
-      <div class="content">
-        <div class="section-heading pillar-heading" id="overview"><div><div class="eyebrow muted">THE ASSESSMENT FRAMEWORK</div><h2>Four pillars. One security posture.</h2></div><span class="tiny-tag">4 EVALUATION DOMAINS</span></div>
-        <div class="pillars">
-          <article class="pillar"><div class="pillar-top"><span class="pillar-icon aqua">⌘</span><span class="pillar-number">1</span></div><h3>Prompt injection</h3><p>Tests whether untrusted content can override the model's governing instructions.</p><div class="pillar-foot"><span class="small-mark aqua-dot"></span> Instruction integrity</div></article>
-          <article class="pillar"><div class="pillar-top"><span class="pillar-icon violet">◉</span><span class="pillar-number">2</span></div><h3>Data exposure</h3><p>Probes for unauthorized disclosure of synthetic secrets and protected context.</p><div class="pillar-foot"><span class="small-mark violet-dot"></span> Confidentiality</div></article>
-          <article class="pillar"><div class="pillar-top"><span class="pillar-icon orange">⌬</span><span class="pillar-number">3</span></div><h3>Unauthorized tools</h3><p>Checks whether simulated privileged tools are invoked outside permitted scope.</p><div class="pillar-foot"><span class="small-mark orange-dot"></span> Access controls</div></article>
-          <article class="pillar"><div class="pillar-top"><span class="pillar-icon yellow">↗</span><span class="pillar-number">4</span></div><h3>Agent autonomy</h3><p>Challenges restrictions on delegation, background tasks and unsupervised behavior.</p><div class="pillar-foot"><span class="small-mark yellow-dot"></span> Operational boundaries</div></article>
+  <main class="page">
+    <!-- ================= ABOVE THE FOLD: TRIAL ARENA ================= -->
+    <section id="arena" class="arena">
+      <form id="assessment-form" class="arena-grid" novalidate>
+        <div class="frame defendant-zone">
+          <label class="dropzone" id="dropzone" for="model-file">
+            <input name="model_file" id="model-file" type="file" accept=".gguf" required />
+            <h1 class="dz-title">UPLOAD</h1>
+            <svg class="cloud-icon" viewBox="0 0 64 48" aria-hidden="true"><path d="M48 40h3a10 10 0 0 0 1-19.9A17 17 0 0 0 19.3 14 12 12 0 0 0 13 40h3"/><path d="M32 46V24m-9 9 9-9 9 9"/></svg>
+            <p class="dz-help">DRAG &amp; DROP OR CLICK TO UPLOAD YOUR<br/>AI AGENT (.GGUF, .PY, .JSON)</p>
+            <div class="defendant-card" id="defendant-card">
+              <div class="def-head">YOUR AI AGENT <span>(THE DEFENDANT)</span></div>
+              <div class="def-body">
+                <svg class="db-icon" viewBox="0 0 160 90" aria-hidden="true">
+                  <ellipse class="orbit o1" cx="80" cy="66" rx="70" ry="16"/>
+                  <ellipse class="orbit o2" cx="80" cy="66" rx="52" ry="11"/>
+                  <g class="stack">
+                    <path d="M56 60v10c0 4.4 10.7 8 24 8s24-3.6 24-8V60"/><path d="M56 44v10c0 4.4 10.7 8 24 8s24-3.6 24-8V44"/>
+                    <path d="M56 28v10c0 4.4 10.7 8 24 8s24-3.6 24-8V28"/><ellipse cx="80" cy="20" rx="24" ry="8"/>
+                    <path d="M56 20v8c0 4.4 10.7 8 24 8s24-3.6 24-8v-8"/>
+                  </g>
+                  <circle class="spark" cx="12" cy="66" r="2.5"/><circle class="spark s2" cx="148" cy="66" r="2.5"/>
+                </svg>
+                <strong id="defendant-name">NO AGENT LOADED</strong>
+                <small class="mono" id="upload-status">.GGUF targets run on this server · max <span id="max-size">8 GiB</span></small>
+              </div>
+            </div>
+          </label>
+          <div class="cta-row">
+            <label class="consent-line"><input type="checkbox" id="authorization" /><span>I own or am authorized to test this model.</span></label>
+            <button class="cta" type="submit" id="run-button" disabled><span id="run-text">INITIATE PEN-TEST / PUT ON TRIAL</span></button>
+          </div>
+          <div class="error-box hidden" id="error-box" role="alert"></div>
         </div>
 
-        <section class="assessment-section" id="assessment">
-          <div class="section-heading"><div><div class="eyebrow muted">START TESTING</div><h2>New security assessment</h2><p class="section-subtitle">Upload the target GGUF model you want assessed. Our three Courthouse red-team GGUF models are stored and loaded by the server. No agent uploads or external model APIs required.</p></div><span class="step-chip"><span>●</span> NO TOOLS ARE EXECUTED</span></div>
-          <div class="form-container">
-            <div class="form-main">
-              <div class="form-label">1 / MODEL SOURCE</div>
-              <div class="red-team-only" aria-label="Uploaded target model"><span class="red-team-mark">⬆</span><div class="red-team-description"><b>Upload the target AI model</b><small>The target runs on the Courthouse host using llama-cpp-python. Only GGUF weights are supported in this version.</small></div></div>
-              <form id="assessment-form" novalidate>
-                <div id="endpoint-fields">
-                  <label class="field"><span>Upload target GGUF model file <i>*</i></span><input name="model_file" id="model-file" type="file" accept=".gguf" required /><small>Local .gguf model weights only. Only your target model is uploaded. Our red-team model files are already hosted by Courthouse. Maximum 8 GiB by default. Install llama-cpp-python for inference.</small></label>
-                  <div class="upload-status" id="upload-status">No model uploaded yet.</div>
-                </div>
+        <svg class="fan" viewBox="0 0 100 300" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M0 150 L100 40"/><path d="M0 150 L100 85"/><path d="M0 150 L100 125"/>
+          <path d="M0 150 L100 165"/><path d="M0 150 L100 210"/><path d="M0 150 L100 255"/>
+        </svg>
 
-                <div class="form-separator"></div>
-                <div class="form-label">2 / RED TEAM ASSESSMENT</div>
-                <div class="red-team-only" aria-label="The Courthouse red-team assessment">
-                  <span class="red-team-mark">⚖</span>
-                  <div class="red-team-description"><b>The Courthouse · Red Team</b><small>One strategy: Red Team. Three distinct server-hosted AI models—not scripted test plans—generate attacks across all four domains, share findings, and prepare individual reports.</small></div>
-                  <span class="red-team-tag">ACTIVE</span>
-                </div>
-                <div class="form-label">3 / SERVER-HOSTED COURTHOUSE AGENTS</div>
-                <div class="hosted-agents" id="hosted-agents" aria-live="polite">
-                  <div class="hosted-agent"><span class="hosted-dot"></span><strong>Courthouse Agent 1</strong><small>Checking server model…</small></div>
-                  <div class="hosted-agent"><span class="hosted-dot"></span><strong>Courthouse Agent 2</strong><small>Checking server model…</small></div>
-                  <div class="hosted-agent"><span class="hosted-dot"></span><strong>Courthouse Agent 3</strong><small>Checking server model…</small></div>
-                </div>
-                <div id="engine-hint" class="engine-hint"><span>ⓘ</span> The three red-team models are configured by the Courthouse administrator, not uploaded by visitors.</div>
-                <div class="consent-line" id="consent-line"><label><input type="checkbox" id="authorization" /><span>I own or am authorized to test this target model and consent to its processing by the Courthouse server.</span></label></div>
-                <div class="submit-row"><button class="run-button" type="submit" id="run-button"><span class="btn-icon">↗</span><span id="run-text">Run security assessment</span><span class="btn-arrow">→</span></button><span class="submit-caption">Synthetic data only · No real tool execution</span></div>
-                <div class="error-box hidden" id="error-box" role="alert"></div>
-              </form>
+        <div class="frame jury-zone">
+          <div class="jury-panel">
+            <div class="panel-head">
+              <h2>THE AI JURY (PENETRATION TESTERS)</h2>
+              <span class="toggle" id="jury-toggle" title="Jury online status"><span class="knob"></span></span>
             </div>
-            <aside class="form-aside"><div class="aside-topline">WHAT YOU'LL RECEIVE <span>↗</span></div><div class="aside-visual"><div class="visual-ring"><div class="visual-inner">A<span>↗</span></div></div><span class="sparkle">✦</span></div><div class="aside-title">A clearer view of your model's security.</div><p>Every assessment generates a category-by-category score and an inspectable record of each attempt.</p><div class="aside-features"><div><span>✓</span> Overall security grade</div><div><span>✓</span> 3 individual, complete four-category assessments</div><div><span>✓</span> Joint Courthouse team summary</div><div><span>✓</span> Prompts, responses and tool calls</div><div><span>✓</span> Exportable JSON findings</div></div><div class="aside-foot">Evidence before assumptions. <span>◈</span></div></aside>
+            <div class="jury-grid" id="hosted-agents" aria-live="polite"></div>
           </div>
-        </section>
+          <div class="trial-status" id="trial-status" aria-label="Courthouse Stress Test status">
+            <div>
+              <div class="ts-line">TRIAL STATUS: <b id="trial-status-text">IDLE / READY</b></div>
+              <div class="ts-line ts-sub" id="trial-status-sub">PEN-TESTING IN PROGRESS...</div>
+            </div>
+            <span class="toggle" id="trial-toggle"><span class="knob"></span></span>
+          </div>
+          <p class="engine-hint mono" id="engine-hint">Courthouse Stress Test · scanning models/agents…</p>
+        </div>
+      </form>
 
-        <section id="results" class="results-section">
-          <div class="section-heading"><div><div class="eyebrow muted">EVALUATION REPORT</div><h2>Assessment results</h2></div><button type="button" class="outline-button hidden" id="export-button">↓ Export JSON report</button></div>
-          <div id="results-empty" class="results-empty"><div class="empty-icon">▤</div><h3>Your security report will appear here.</h3><p>Upload a target GGUF model to test it against the three preloaded Courthouse agents.</p><a href="#assessment">Configure assessment →</a></div>
-          <div id="results-running" class="hidden"><div class="running-head"><span class="spinner"></span><div><h3>Assessment in progress</h3><p id="progress-message">Using three hosted Courthouse AI models…</p></div><strong id="progress-percentage">0%</strong></div><div class="progress-track"><div id="progress-fill"></div></div><div id="live-events" class="live-events" aria-live="polite"></div></div>
-          <div id="results-complete" class="hidden"><div class="result-intro"><span id="demo-banner" class="demo-banner hidden">SIMULATED RESULTS · NOT A REAL MODEL ASSESSMENT</span><div class="report-meta"><strong id="report-model">—</strong><span id="report-time">—</span></div></div><div class="summary-layout"><div class="score-box"><div class="score-ring" id="score-ring"><div class="score-core"><span id="score-value">—</span><small id="score-label">SCORE</small></div></div><div class="score-text"><div id="score-grade" class="score-grade">—</div><h3>Overall security score</h3><p id="score-explainer">Across four evaluated categories.</p></div></div><div class="summary-stat"><span>TESTS RUN</span><strong id="stat-tests">—</strong><small>Observed requests</small></div><div class="summary-stat"><span>ISSUES FLAGGED</span><strong class="rose-text" id="stat-findings">—</strong><small>Rule violations observed</small></div><div class="summary-stat"><span>TEST COVERAGE</span><strong id="stat-coverage">—</strong><small id="stat-engine">—</small></div></div><section class="courtroom-section"><div class="section-heading"><div><div class="eyebrow muted">ONE STRATEGY · THREE RED-TEAM AGENTS</div><h2>The Courthouse</h2><p class="section-subtitle">Three server-hosted GGUF models generate attacks, test your uploaded target, exchange findings, and prepare reports.</p></div></div><article class="joint-opinion"><h3>Joint Courthouse opinion</h3><p id="court-summary"></p><p class="report-disclaimer" id="court-method"></p></article><div class="court-agents" id="court-agents"></div><div class="court-messages"><h3>Inter-agent communications</h3><div id="court-communications"></div></div></section><div class="category-heading"><h3>Score breakdown</h3><small>100 = no failure observed in measured tests</small></div><div id="category-grid" class="category-grid"></div><div class="findings-heading"><div><h3>Evidence &amp; findings</h3><p>Review AI-generated attack prompts, actual target responses, and proposed (never executed) tool calls.</p></div><span class="tiny-tag" id="findings-count">0 TESTS</span></div><div id="findings-list" class="findings-list"></div><p class="report-disclaimer" id="report-disclaimer"></p></div>
-        </section>
-        <footer><span>⬡ Courthouse <i>/</i> AI SECURITY TESTING</span><span>Built for controlled, authorized assessment. Not a security certification.</span></footer>
+      <div class="logs-panel">
+        <div class="panel-head">
+          <h2>COURT LOGS / LIVE VULNERABILITY FEED</h2>
+          <span class="mono progress-pct" id="progress-percentage">0%</span>
+          <span class="toggle on" title="4 EVALUATION DOMAINS"><span class="knob"></span></span>
+        </div>
+        <div class="logs-body">
+          <div class="scan-bars" id="scan-bars"></div>
+          <ul class="log-stream mono" id="live-events" aria-live="polite">
+            <li>• Court in session. Awaiting defendant upload…</li>
+          </ul>
+        </div>
+        <div class="progress-track"><div id="progress-fill"></div></div>
+        <p class="mono progress-msg" id="progress-message">Standing by.</p>
       </div>
-    </main>
-  </div>
+    </section>
+
+    <!-- ================= BELOW THE FOLD: RESULTS & VERDICT ================= -->
+    <section id="results" class="results">
+      <div class="verdict-row">
+        <div class="frame-panel verdict-left">
+          <h2 class="big">TRIAL RESULTS &amp; VERDICT</h2>
+          <div class="dl-wrap">
+            <button type="button" class="outline-btn dl-toggle" id="dl-top" disabled>
+              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 3v10m-4-4 4 4 4-4M4 16h12"/></svg>
+              DOWNLOAD COMPREHENSIVE REPORT (PDF/JSON)
+            </button>
+            <div class="dl-menu hidden"><button type="button" data-export="pdf">PDF (print)</button><button type="button" data-export="json" id="export-button">JSON</button></div>
+          </div>
+          <p class="report-meta mono"><strong id="report-model">No trial yet</strong> <span id="report-time">Upload a defendant and put it on trial to generate a verdict.</span></p>
+        </div>
+        <div class="frame-panel verdict-right">
+          <div class="ring" id="score-ring"><div class="ring-core"><span id="score-value">—</span><small id="score-label">FAIL/PASS</small></div></div>
+          <ul class="metric-block">
+            <li>OVERALL SECURITY GRADE: <b id="m-grade" class="amber">—</b></li>
+            <li>RISK LEVEL: <b id="m-risk" class="amber">—</b></li>
+            <li>VULNERABILITIES FOUND: <b id="stat-findings" class="red">—</b></li>
+            <li>ATTACK RESISTANCE: <b id="m-resist" class="green">—</b></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="frame-panel reports-panel">
+        <div class="filter-bar">
+          <h2>JURY OF AI AGENTS - INDIVIDUAL REPORTS</h2>
+          <svg class="filter-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M3 4h14l-5.5 6.5V16l-3 1.5v-7Z"/></svg>
+          <div class="pills">
+            <button type="button" class="pill active" data-filter="all">All</button>
+            <button type="button" class="pill fail" data-filter="fail" id="pill-fail">Fail (0)</button>
+            <button type="button" class="pill pass" data-filter="pass" id="pill-pass">Pass (0)</button>
+          </div>
+          <input type="search" id="report-search" class="search" placeholder="Search" aria-label="Search juror reports" />
+        </div>
+        <div class="report-grid" id="court-agents">
+          <p class="no-match mono">No juror reports yet. Reports appear here after a trial.</p>
+        </div>
+        <div class="action-footer">
+          <div class="dl-wrap up">
+            <button type="button" class="outline-btn dl-toggle" id="dl-bottom" disabled>DOWNLOAD COMPREHENSIVE REPORT (PDF/JSON)</button>
+            <div class="dl-menu hidden"><button type="button" data-export="pdf">PDF (print)</button><button type="button" data-export="json">JSON</button></div>
+          </div>
+          <button type="button" class="outline-btn" id="retest-button">RE-TEST AGENT</button>
+        </div>
+      </div>
+
+      <details class="frame-panel deep-dive hidden" id="results-complete">
+        <summary>FULL TRIAL RECORD · <span class="mono" id="stat-tests">—</span> TESTS · <span class="mono" id="stat-coverage">—</span> COVERAGE</summary>
+        <p class="mono dim" id="score-explainer"></p>
+        <h3>JOINT COURTHOUSE OPINION</h3>
+        <p id="court-summary"></p>
+        <p class="mono dim" id="court-method"></p>
+        <h3>INTER-AGENT COMMUNICATIONS</h3>
+        <div id="court-communications"></div>
+        <h3>SCORE BREAKDOWN <small class="mono dim" id="stat-engine"></small></h3>
+        <div id="category-grid" class="category-grid"></div>
+        <h3>EVIDENCE &amp; FINDINGS <small class="mono dim" id="findings-count">0 TESTS</small></h3>
+        <div id="findings-list" class="findings-list"></div>
+        <p class="mono dim disclaimer" id="report-disclaimer"></p>
+      </details>
+    </section>
+
+    <footer class="site-foot mono"><span>COURTHOUSE / AI SECURITY TESTING</span><span>Built for controlled, authorized assessment. Not a security certification.</span></footer>
+  </main>
+  <div class="toast hidden mono" id="toast" role="status"></div>
 </body>
 </html>

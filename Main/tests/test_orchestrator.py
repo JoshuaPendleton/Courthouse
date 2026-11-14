@@ -7,7 +7,7 @@ class FakeThreeModelRuntime:
     """Test double verifies model calls and report wiring, never runs in live assessments."""
     def __init__(self):
         self.calls=[]
-    def __call__(self,model,messages,temperature,max_tokens):
+    def __call__(self,model,messages,temperature,max_tokens,schema=None):
         self.calls.append(model)
         self_msg=json.loads(messages[1]['content'])
         if 'assignment' in self_msg:

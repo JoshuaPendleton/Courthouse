@@ -11,5 +11,7 @@ Thumbs.db
 # Never publish visitor-provided models or their artifacts
 models/uploads/*
 !models/uploads/.gitkeep
+# Local sample target models for manual testing
+test-targets/
 # Server-hosted models/agents/*.gguf CAN be tracked with Git LFS intentionally.
 # Review their redistribution licenses before adding them to any public repository.
