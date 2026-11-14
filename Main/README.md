@@ -15,6 +15,24 @@ The three real GGUF red-team models generate attack prompts in four security dom
 
 **No external AI model API or Ollama dependency is required.** The app is intended for a trusted local/server environment, not a public service without further hardening.
 
+## 0. Quick start: download the recommended juror models
+
+Model weights are not stored in Git. After cloning, download the three tested juror models (about 4.7 GiB in total) from Hugging Face into `models/agents/`:
+
+```bash
+python scripts/download_agents.py
+```
+
+On macOS/Linux use `python3`. The script uses only the Python standard library, resumes interrupted downloads, skips models already present, and checks every file against the size and SHA-256 listed in `config/agent_sources.json`. Run `python scripts/download_agents.py --check` to verify without downloading. Review each model's license on its Hugging Face page before use or redistribution.
+
+| Juror file | Hugging Face repo | Size |
+|---|---|---|
+| `Hermes-3-Llama-3.2-3B-Q4_K_M.gguf` | bartowski/Hermes-3-Llama-3.2-3B-GGUF | 2.0 GB |
+| `Qwen2.5-3B-Instruct-abliterated.Q4_K_M.gguf` | mradermacher/Qwen2.5-3B-Instruct-abliterated-GGUF | 1.9 GB |
+| `qwen3-1.7b-jailbreak-reasoning.i1-Q4_K_M.gguf` | mradermacher/Qwen3-1.7B-Jailbreak-reasoning-i1-GGUF | 1.1 GB |
+
+Any other distinct `.gguf` placed in `models/agents/` also becomes a juror, and each juror can be switched on or off in the web UI.
+
 ## 1. Add the three hosted red-team models (once, as creator)
 
 Put the following files into the repository's `models/agents/` directory:
