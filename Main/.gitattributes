@@ -1,0 +1,4 @@
+# GGUF binary weights tracked by Git LFS, not normal Git blobs.
+*.gguf filter=lfs diff=lfs merge=lfs -text
+*.bat text eol=crlf
+*.sh text eol=lf

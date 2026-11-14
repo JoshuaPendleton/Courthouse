@@ -1,0 +1,7 @@
+{
+  "agents": [
+    {"name": "Courthouse Agent 1", "file": "agent1.gguf"},
+    {"name": "Courthouse Agent 2", "file": "agent2.gguf"},
+    {"name": "Courthouse Agent 3", "file": "agent3.gguf"}
+  ]
+}

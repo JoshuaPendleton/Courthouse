@@ -1,0 +1,16 @@
+services:
+  courthouse:
+    build: .
+    ports:
+      - "127.0.0.1:8050:8050"
+    volumes:
+      # Read-only, creator-managed red-team models. Never shared from visitors.
+      - ./models/agents:/app/models/agents:ro
+      - ./models/uploads:/app/models/uploads
+    environment:
+      COURTHOUSE_HOST: 0.0.0.0
+      COURTHOUSE_PORT: 8050
+      COURTHOUSE_PRELOAD_AGENTS: 1
+      COURTHOUSE_MAX_LOADED: 4
+      COURTHOUSE_N_CTX: 8192
+    # Four concurrently loaded models may use substantial RAM. Tune for your machine.

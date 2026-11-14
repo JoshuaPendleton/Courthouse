@@ -1,0 +1,24 @@
+name: Courthouse source validation
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ['3.11']
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Validate source without downloading model weights
+        run: python -m unittest discover -s tests -v
+      - name: Compile source
+        run: python -m compileall -q server.py courthouse.py local_engine.py

@@ -1,0 +1,2 @@
+# Web server and red-team orchestrator use Python standard library.
+# Install required llama-cpp-python separately from requirements-inference.txt.

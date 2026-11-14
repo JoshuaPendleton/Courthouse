@@ -1,0 +1,15 @@
+# Python and runtime
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.DS_Store
+Thumbs.db
+.env
+*.log
+# Never publish visitor-provided models or their artifacts
+models/uploads/*
+!models/uploads/.gitkeep
+# Server-hosted models/agents/*.gguf CAN be tracked with Git LFS intentionally.
+# Review their redistribution licenses before adding them to any public repository.

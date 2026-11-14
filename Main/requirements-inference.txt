@@ -1,0 +1,2 @@
+# Native llama.cpp inference for the three hosted red-team models and uploaded target.
+llama-cpp-python>=0.3.0,<0.4.0

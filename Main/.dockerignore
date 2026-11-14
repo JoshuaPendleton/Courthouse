@@ -1,0 +1,8 @@
+.git
+.venv
+__pycache__
+*.pyc
+.env
+models/uploads
+# Agent files bind-mounted at runtime rather than copied into public image
+models/agents/*.gguf
