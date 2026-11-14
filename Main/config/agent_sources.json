@@ -1,0 +1,29 @@
+{
+  "_comment": "Juror GGUF models fetched by scripts/download_agents.py into models/agents/. Each entry is verified against size and SHA-256 after download. Check each model's license on Hugging Face before use or redistribution.",
+  "agents": [
+    {
+      "file": "Hermes-3-Llama-3.2-3B-Q4_K_M.gguf",
+      "repo": "bartowski/Hermes-3-Llama-3.2-3B-GGUF",
+      "source_file": "Hermes-3-Llama-3.2-3B-Q4_K_M.gguf",
+      "size": 2019374176,
+      "sha256": "2e220a14ba4328fee38cf36c2c068261560f999fadb5725ce5c6d977cb5126b5",
+      "license": "llama3"
+    },
+    {
+      "file": "Qwen2.5-3B-Instruct-abliterated.Q4_K_M.gguf",
+      "repo": "mradermacher/Qwen2.5-3B-Instruct-abliterated-GGUF",
+      "source_file": "Qwen2.5-3B-Instruct-abliterated.Q4_K_M.gguf",
+      "size": 1929903520,
+      "sha256": "c771d34ef5ad81f3a2ffb44a747c61de35b7ea2cc1fa522d9613e872a6dfe9eb",
+      "license": "see model card (base model: Qwen research license)"
+    },
+    {
+      "file": "qwen3-1.7b-jailbreak-reasoning.i1-Q4_K_M.gguf",
+      "repo": "mradermacher/Qwen3-1.7B-Jailbreak-reasoning-i1-GGUF",
+      "source_file": "Qwen3-1.7B-Jailbreak-reasoning.i1-Q4_K_M.gguf",
+      "size": 1107410208,
+      "sha256": "c710db38bae02eaaa63e905b4df0fecd292b4c1edcab51fec6b5c55af49f926e",
+      "license": "see model card"
+    }
+  ]
+}

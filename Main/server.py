@@ -53,9 +53,12 @@ class Handler(http.server.BaseHTTPRequestHandler):
         path = urllib.parse.urlparse(self.path).path
         if path == '/api/health':
             status = hosted_status()
+            n = len(status.get('agents') or [])
+            engine = (f'{n} server-hosted GGUF red-team AI model' + ('' if n == 1 else 's')
+                      if status.get('ready') else 'server-hosted GGUF red-team AI models')
             return self.send_json(200, {'ok':True,
                 'target_mode':'Upload one local target GGUF model',
-                'attack_engine':'3 server-hosted GGUF red-team AI models',
+                'attack_engine':engine,
                 'target_inference_ready':status['inference_installed'],
                 'agents_ready':status['ready'],'agents_preloaded':status['preloaded'],
                 'agents':status['agents'],'agent_error':status['error'],
@@ -98,8 +101,11 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 return self.send_json(403, {'error':'Confirm authorization to test the model.'})
             if request.get('strategy') != 'red_team':
                 raise ValueError('Red Team is the only Courthouse strategy.')
+            mode = request.get('mode', 'full')
+            if mode not in ('quick', 'full'):
+                raise ValueError('mode must be "quick" or "full".')
             target_id = str((request.get('target') or {}).get('model_id', ''))
-            target, agent_infos = validate_hosted_assessment(target_id)
+            target, agent_infos = validate_hosted_assessment(target_id, request.get('agents'))
             try:
                 import llama_cpp  # noqa: F401
             except ImportError:
@@ -109,12 +115,13 @@ class Handler(http.server.BaseHTTPRequestHandler):
         except (ValueError, TypeError, json.JSONDecodeError) as exc:
             return self.send_json(400, {'error':str(exc)})
 
-        labels = [f'Agent {i+1}: {info["name"]}' for i, info in enumerate(agent_infos)]
+        labels = [info['file'] for info in agent_infos]
         label_to_id = {label: info['model_id'] for label, info in zip(labels, agent_infos)}
 
-        def local_chat(label, messages, temperature, max_tokens):
+        def local_chat(label, messages, temperature, max_tokens, schema=None):
             # Actual inference on the corresponding server-hosted red-team GGUF weights.
-            return chat_uploaded(label_to_id[label], messages, temperature, max_tokens)
+            return chat_uploaded(label_to_id[label], messages, temperature, max_tokens, schema=schema,
+                                 quick=mode == 'quick')
 
         try:
             self.send_response(200)
@@ -130,7 +137,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
             try:
                 for event in assess_stream(target_id, target['name'], target['sha256'],
-                         labels, local_chat, lambda case: run_local(case, target_id)):
+                         labels, local_chat, lambda case: run_local(case, target_id), mode=mode):
                     emit(event)
             except Exception as exc:
                 emit({'type':'error', 'message':f'Courthouse assessment interrupted: {type(exc).__name__}: {str(exc)[:220]}'})
@@ -148,13 +155,13 @@ class Server(socketserver.ThreadingMixIn, http.server.HTTPServer):
 
 
 if __name__ == '__main__':
-    print('Checking and preloading three server-hosted Courthouse AI model weights...')
+    print('Scanning models/agents for server-hosted Courthouse GGUF weights...')
     state = initialize_hosted_agents()
     if state['ready']:
-        print(f"3 Courthouse models ready; preloaded={state['preloaded']}.")
+        print(f"{len(state['agents'])} Courthouse model(s) ready; preloaded={state['preloaded']}.")
     else:
         print('AGENTS NOT READY: '+state['error'])
-        print('Place three distinct .gguf files in models/agents and restart this server.')
+        print('Place one or more distinct .gguf files in models/agents (list refreshes live).')
     print(f'Courthouse v7 | http://{HOST}:{PORT}')
     print('Upload only the TARGET GGUF from the browser. No scripted fallback.')
     print('Local private development only; do not expose publicly without authentication and sandboxing.')

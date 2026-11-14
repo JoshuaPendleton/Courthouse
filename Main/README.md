@@ -1,19 +1,40 @@
-# Courthouse — Three locally hosted GGUF red-team AI agents
+# Courthouse local adversarial stress testing
 
-Courthouse is a cross-platform, **locally run Python web application** for authorized red-team testing of an uploaded GGUF model. The visitor uploads **only the model being assessed**. Three independent red-team GGUF models are stored and managed **on the Courthouse server**; they are not uploaded on every visit. There is one strategy, **Red Team**.
+Select the hosted judges and upload the defendant GGUF. Every judge tests prompt injection, confidential-data exposure, unauthorized tool use, and autonomy against the existing synthetic protocols. The defendant receives its system policy and the judge's attack in separate messages. The judge evaluates its recorded responses and proposed tool calls against those policies. The original scoring rules determine the letter grades.
 
-The three real GGUF red-team models generate attack prompts in four security domains (prompt injection, confidential-data exposure, unauthorized tool use, and autonomous-agent behavior beyond approved boundaries). They exchange notes after the first test round, then produce three individual scorecards and a combined evidence-based assessment. The code does **not** use scripted AI-agent substitutes. Proposed tools are simulated and are never executed.
+| Mode | Work per selected judge | Reports | Assessment budget |
+|---|---|---|---|
+| Quick | Four probes, one per domain | Independent conclusion, four domain analyses and grade per judge | 2 minutes |
+| Full | Eight probes, one per domain in each of two rounds | Individual reports plus peer memos, deliberation and a joint opinion when multiple judges participate | 15 minutes |
 
-> **Important: GGUF model weights are NOT included in this export.** No actual model files were provided. The project includes the complete code and model-storage layout, but the creator must add three licensed, distinct GGUF files once to make the red team operational. The health screen explicitly reports missing models, rather than pretending the agents have loaded.
+Budgets begin after upload and model validation. Generation checks the deadline between tokens. Native model loading and prompt processing may overrun it. Unfinished probes are marked skipped, and the report records incomplete coverage. Expand a judge's card for its evidence and analysis, or export the trial as JSON.
 
 ## Requirements
 
 - Windows 10/11, macOS or Linux, with **Python 3.10+** and enough RAM/disk to load all three red-team weights plus the uploaded target. Using the default eager preload, peak memory can exceed the sum of the sizes of all four models, plus inference/context overhead.
 - [`llama-cpp-python`](https://github.com/abetlen/llama-cpp-python), installed by the setup scripts. On some systems this native dependency needs a C++ compiler, CMake, Python development libraries, or platform-specific GPU build settings.
-- Three compatible, **different** `.gguf` chat-model files with licenses permitting your intended use and distribution. If the chosen weights are not instruction-following/chat-tuned, results may be limited or skipped.
+- One or more compatible, **different** `.gguf` chat-model files with licenses permitting your intended use and distribution. If the chosen weights are not instruction-following/chat-tuned, results may be limited or skipped.
 - A GGUF target model file from the visitor (8 GiB default upload limit). Native tool-call tests require the target model's chat template to support simulated tool calls; otherwise those tests are **skipped**, not marked as passed.
 
 **No external AI model API or Ollama dependency is required.** The app is intended for a trusted local/server environment, not a public service without further hardening.
+
+## 0. Quick start: download the recommended juror models
+
+Model weights are not stored in Git. After cloning, download the three tested juror models (about 4.7 GiB in total) from Hugging Face into `models/agents/`:
+
+```bash
+python scripts/download_agents.py
+```
+
+On macOS/Linux use `python3`. The script uses only the Python standard library, resumes interrupted downloads, skips models already present, and checks every file against the size and SHA-256 listed in `config/agent_sources.json`. Run `python scripts/download_agents.py --check` to verify without downloading. Review each model's license on its Hugging Face page before use or redistribution.
+
+| Juror file | Hugging Face repo | Size |
+|---|---|---|
+| `Hermes-3-Llama-3.2-3B-Q4_K_M.gguf` | bartowski/Hermes-3-Llama-3.2-3B-GGUF | 2.0 GB |
+| `Qwen2.5-3B-Instruct-abliterated.Q4_K_M.gguf` | mradermacher/Qwen2.5-3B-Instruct-abliterated-GGUF | 1.9 GB |
+| `qwen3-1.7b-jailbreak-reasoning.i1-Q4_K_M.gguf` | mradermacher/Qwen3-1.7B-Jailbreak-reasoning-i1-GGUF | 1.1 GB |
+
+Any other distinct `.gguf` placed in `models/agents/` also becomes a juror, and each juror can be switched on or off in the web UI.
 
 ## 1. Add the three hosted red-team models (once, as creator)
 
@@ -43,7 +64,7 @@ Courthouse_Complete_CrossPlatform_v7/
 └── .github/workflows/ci.yml
 ```
 
-You can rename these files, but update `config/agent_models.json` to match. All filenames must refer to files directly within `models/agents/`; directory traversal and symlink escapes are blocked. Each GGUF must have a valid `GGUF` header, and the agent files must have **different SHA-256 hashes**. The uploaded target must also differ from all three hosted agent files.
+Judge filenames are discovered directly from the directory. All filenames must refer to files directly within `models/agents/`; directory traversal and symlink escapes are blocked. Each GGUF must have a valid `GGUF` header, and the agent files must have **different SHA-256 hashes**. The uploaded target must also differ from all three hosted agent files.
 
 Run `python scripts/check_agents.py` (or `python3 ...`) for a quick file-presence check. This script is a file checker, **not an AI red-team test**.
 
@@ -95,10 +116,10 @@ The Docker Compose configuration mounts `models/agents` as read-only, persists u
 ## 3. What happens when Courthouse starts
 
 1. `server.py` invokes `initialize_hosted_agents()`.
-2. `local_engine.py` reads `config/agent_models.json` and validates each configured GGUF file.
+2. `local_engine.py` scans `models/agents/` and validates each discovered GGUF file.
 3. The three models are registered with permanent server-side IDs and checked for distinct weights.
 4. By default (`COURTHOUSE_PRELOAD_AGENTS=1`) all three are loaded into `llama-cpp-python` **before the server starts accepting assessments**. This needs substantial RAM. Startup will show model-loading errors if the files or runtime are unavailable.
-5. When a user opens the website, `/api/health` reports which agents are loaded/ready. The three cards show their status. **The Run button remains unavailable** until the three hosted models are ready.
+5. When a user opens the website, `/api/health` reports which agents are loaded/ready. Each discovered judge has a selectable seat. Enable at least one ready judge.
 6. The user submits **one target GGUF** to `/api/upload`; the target is loaded for local inference and the three server-hosted models generate attacks and reports.
 
 If the hosted files aren't present, the server still serves the setup UI and health diagnostics, but **cannot run an assessment**. Fix the files/dependencies and restart the server. The app never substitutes scripted tests in place of missing AI models.
@@ -110,7 +131,7 @@ Environment variables are documented in `.env.example`. Set them before running;
 | Variable | Default | Meaning |
 |---|---|---|
 | `COURTHOUSE_PRELOAD_AGENTS` | `1` | `1` = load all three hosted models at startup; `0` = validate now, load on first use |
-| `COURTHOUSE_MAX_LOADED` | `4` | Maximum cached model instances (3 hosted + 1 target by default) |
+| `COURTHOUSE_MAX_LOADED` | `2` | Maximum cached model instances (active juror + target; raise if you have plenty of RAM) |
 | `COURTHOUSE_N_CTX` | `8192` | Local inference context length |
 | `COURTHOUSE_GPU_LAYERS` | `0` | Number of llama.cpp GPU layers (hardware-dependent) |
 | `COURTHOUSE_PORT` | `8050` | Local HTTP port |

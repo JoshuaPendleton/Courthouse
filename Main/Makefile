@@ -1,4 +1,6 @@
-.PHONY: setup run test status
+.PHONY: setup run test status agents
+agents:
+	python3 scripts/download_agents.py
 setup:
 	sh ./install_dependencies.sh
 run:
