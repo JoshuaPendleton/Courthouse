@@ -128,7 +128,7 @@ Environment variables are documented in `.env.example`. Set them before running;
 | Variable | Default | Meaning |
 |---|---|---|
 | `COURTHOUSE_PRELOAD_AGENTS` | `1` | `1` = load all three hosted models at startup; `0` = validate now, load on first use |
-| `COURTHOUSE_MAX_LOADED` | `4` | Maximum cached model instances (3 hosted + 1 target by default) |
+| `COURTHOUSE_MAX_LOADED` | `2` | Maximum cached model instances (active juror + target; raise if you have plenty of RAM) |
 | `COURTHOUSE_N_CTX` | `8192` | Local inference context length |
 | `COURTHOUSE_GPU_LAYERS` | `0` | Number of llama.cpp GPU layers (hardware-dependent) |
 | `COURTHOUSE_PORT` | `8050` | Local HTTP port |

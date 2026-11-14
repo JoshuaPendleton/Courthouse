@@ -86,6 +86,18 @@ button:disabled{cursor:not-allowed;opacity:.5}
 .cta-row{display:flex;flex-direction:column;align-items:center;gap:10px}
 .consent-line{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--muted);cursor:pointer}
 .consent-line input{accent-color:var(--amber)}
+.mode-switch{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:0;border:0;padding:0;margin:0}
+.mode-switch legend{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.mode-switch label{position:relative;cursor:pointer}
+.mode-switch input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer}
+.mode-switch span{display:block;padding:5px 14px;font-family:var(--mono);font-size:11px;letter-spacing:.08em;
+  color:var(--muted);border:1px solid var(--line-hi);background:transparent}
+.mode-switch label:first-of-type span{border-radius:5px 0 0 5px}
+.mode-switch label:last-of-type span{border-radius:0 5px 5px 0;border-left:0}
+.mode-switch input:checked+span{color:#0B1220;background:var(--cyan);border-color:var(--cyan)}
+.mode-switch input:focus-visible+span{outline:2px solid var(--cyan);outline-offset:2px}
+.mode-switch input:disabled+span{opacity:.5;cursor:not-allowed}
+.mode-switch small{flex-basis:100%;text-align:center;margin-top:5px;font-family:var(--mono);font-size:10px;color:var(--dim)}
 .cta{padding:10px 18px;border:1px solid var(--gold);border-radius:6px;background:linear-gradient(180deg,#FBBF24,#F59E0B);
   color:#1A1205;font-weight:700;font-size:15px;letter-spacing:.02em;box-shadow:0 0 22px rgba(245,158,11,.55);transition:.2s}
 .cta:not(:disabled):hover{box-shadow:0 0 36px rgba(245,158,11,.8);transform:translateY(-1px)}

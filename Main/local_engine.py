@@ -269,7 +269,9 @@ def _get_llm(model_id):
     info = get_model_info(model_id)
     if info is None:
         raise ValueError('Model is not registered; reload after restarting the server.')
-    capacity = max(1, min(16, int(os.getenv('COURTHOUSE_MAX_LOADED','4'))))
+    # Default 2 = the active juror + the target. Jurors run one at a time, so more cached models
+    # mostly just eat RAM (on 16 GB machines 4 cached models pushed Windows into heavy paging).
+    capacity = max(1, min(16, int(os.getenv('COURTHOUSE_MAX_LOADED','2'))))
     while len(_CACHE) >= capacity:
         _, old = _CACHE.popitem(last=False)
         if hasattr(old,'close'):

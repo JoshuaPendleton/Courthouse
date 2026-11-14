@@ -9,7 +9,17 @@ let hostedAgents = [];
 // Files the user has switched OFF (remembered per browser); everything else is used in the trial.
 let disabledAgents = new Set();
 try{disabledAgents=new Set(JSON.parse(localStorage.getItem('courthouse.disabledAgents')||'[]'));}catch{}
-let trialSeats = [];   // seat numbers (1-based) of the jurors taking part in the current trial
+let trialSeats = [];
+const MODE_HINTS = {quick:'1 round · score only · fastest', full:'2 rounds · juror reports & deliberation · slowest'};
+function trialMode(){return document.querySelector('input[name="trial-mode"]:checked')?.value||'quick';}
+function setupModeSwitch(){
+  let saved='quick';try{saved=localStorage.getItem('courthouse.trialMode')||'quick';}catch{}
+  const pick=document.querySelector(`input[name="trial-mode"][value="${saved}"]`);if(pick)pick.checked=true;
+  const sync=()=>{el('mode-hint').textContent=MODE_HINTS[trialMode()];
+    try{localStorage.setItem('courthouse.trialMode',trialMode());}catch{}};
+  document.querySelectorAll('input[name="trial-mode"]').forEach(r=>r.addEventListener('change',sync));sync();
+}
+function lockModeSwitch(on){document.querySelectorAll('input[name="trial-mode"]').forEach(r=>{r.disabled=on;});}   // seat numbers (1-based) of the jurors taking part in the current trial
 let reportFilter = 'all';
 let selectedCard = null;
 const JURY_SEATS = 12;
@@ -218,7 +228,7 @@ async function initialize(){
     document.querySelectorAll('.pill').forEach(x=>x.classList.toggle('active',x===p));
     applyFilter();
   }));
-  setupDropzone();setupScrollSpy();renderJury();resetScan();
+  setupDropzone();setupScrollSpy();setupModeSwitch();renderJury();resetScan();
   try{
     await refreshHealth();
     setInterval(()=>{if(running||document.hidden)return;refreshHealth().catch(markOffline);},5000);
@@ -268,7 +278,9 @@ async function submitAssessment(event){
     const chosen=selectedAgents();
     trialSeats=chosen.map(a=>hostedAgents.indexOf(a)+1);
     const payload={target:{model_id:uploadedModel.model_id},authorized:true,strategy:'red_team',
-                   agents:chosen.map(a=>a.file||a.name)};
+                   agents:chosen.map(a=>a.file||a.name),mode:trialMode()};
+    lockModeSwitch(true);
+    log(`${trialMode()==='quick'?'Quick':'Full'} trial · ${chosen.length} juror${chosen.length===1?'':'s'}`,'info');
     el('progress-message').textContent='Convening the jury…';
     const response=await fetch('/api/run',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
     if(!response.ok){let msg=`Assessment request failed: HTTP ${response.status}`;
@@ -290,6 +302,7 @@ async function submitAssessment(event){
   }finally{
     running=false;el('run-button').disabled=!agentsReady||!selectedAgents().length;el('run-text').textContent='INITIATE PEN-TEST / PUT ON TRIAL';
     document.querySelectorAll('.j-check').forEach(b=>{b.disabled=false;});
+    lockModeSwitch(false);
     document.querySelectorAll('.juror.active').forEach(j=>j.classList.remove('active'));
     document.body.classList.remove('running');
   }

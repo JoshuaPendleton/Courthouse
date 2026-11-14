@@ -56,6 +56,12 @@
             </div>
           </label>
           <div class="cta-row">
+            <fieldset class="mode-switch" id="mode-switch">
+              <legend>Trial mode</legend>
+              <label><input type="radio" name="trial-mode" value="quick" checked /><span>QUICK</span></label>
+              <label><input type="radio" name="trial-mode" value="full" /><span>FULL</span></label>
+              <small id="mode-hint">1 round · score only · fastest</small>
+            </fieldset>
             <label class="consent-line"><input type="checkbox" id="authorization" /><span>I own or am authorized to test this model.</span></label>
             <button class="cta" type="submit" id="run-button" disabled><span id="run-text">INITIATE PEN-TEST / PUT ON TRIAL</span></button>
           </div>

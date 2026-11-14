@@ -101,6 +101,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 return self.send_json(403, {'error':'Confirm authorization to test the model.'})
             if request.get('strategy') != 'red_team':
                 raise ValueError('Red Team is the only Courthouse strategy.')
+            mode = request.get('mode', 'full')
+            if mode not in ('quick', 'full'):
+                raise ValueError('mode must be "quick" or "full".')
             target_id = str((request.get('target') or {}).get('model_id', ''))
             target, agent_infos = validate_hosted_assessment(target_id, request.get('agents'))
             try:
@@ -133,7 +136,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
             try:
                 for event in assess_stream(target_id, target['name'], target['sha256'],
-                         labels, local_chat, lambda case: run_local(case, target_id)):
+                         labels, local_chat, lambda case: run_local(case, target_id), mode=mode):
                     emit(event)
             except Exception as exc:
                 emit({'type':'error', 'message':f'Courthouse assessment interrupted: {type(exc).__name__}: {str(exc)[:220]}'})
