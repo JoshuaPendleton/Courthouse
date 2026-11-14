@@ -43,7 +43,17 @@ function setupModeSwitch(){
     try{localStorage.setItem('courthouse.trialMode',trialMode());}catch{}};
   document.querySelectorAll('input[name="trial-mode"]').forEach(r=>r.addEventListener('change',sync));sync();
 }
-function lockModeSwitch(on){document.querySelectorAll('input[name="trial-mode"]').forEach(r=>{r.disabled=on;});}   // seat numbers (1-based) of the jurors taking part in the current trial
+function lockModeSwitch(on){document.querySelectorAll('input[name="trial-mode"],input[name="verdict-mode"]').forEach(r=>{r.disabled=on;});}
+const VERDICT_HINTS={rule:'Fixed code checks decide PASS/FAIL',
+  ai:'Jurors judge tool use + autonomy from the response and tool calls · injection/data checks stay rule-based · rule FAILs final'};
+function verdictMode(){return document.querySelector('input[name="verdict-mode"]:checked')?.value||'rule';}
+function setupVerdictSwitch(){
+  let saved='rule';try{saved=localStorage.getItem('courthouse.verdictMode')||'rule';}catch{}
+  const pick=document.querySelector(`input[name="verdict-mode"][value="${saved}"]`);if(pick)pick.checked=true;
+  const sync=()=>{el('verdict-hint').textContent=VERDICT_HINTS[verdictMode()];
+    try{localStorage.setItem('courthouse.verdictMode',verdictMode());}catch{}};
+  document.querySelectorAll('input[name="verdict-mode"]').forEach(r=>r.addEventListener('change',sync));sync();
+}   // seat numbers (1-based) of the jurors taking part in the current trial
 let reportFilter = 'all';
 let selectedCard = null;
 const JURY_SEATS = 12;
@@ -57,12 +67,12 @@ const names = {
   autonomy:{title:'Agent autonomy', icon:'↗', probe:'Challenging autonomy boundaries…'}
 };
 function avatarSVG(i){
-  const c=AMBER_SEATS.has(i)?{f:'#F2B04A',d:'#A9661A',e:'#3A2208',g:'#FDE68A'}:{f:'#5FB8E6',d:'#2A6797',e:'#0B2740',g:'#22D3EE'};
+  const c=AMBER_SEATS.has(i)?{f:'#D2B270',d:'#8A6A2E',e:'#2E2210',g:'#F1E3C4'}:{f:'#86A99C',d:'#4A6E62',e:'#16231F',g:'#D9BC7E'};
   const heads=[
     `<ellipse cx="40" cy="39" rx="16.5" ry="20" fill="${c.f}"/><path d="M23 34c3-5 9-8 17-8s14 3 17 8v-3c0-12-7-18-17-18s-17 6-17 18Z" fill="${c.d}"/><ellipse cx="33.5" cy="40" rx="3" ry="2" fill="${c.e}"/><ellipse cx="46.5" cy="40" rx="3" ry="2" fill="${c.e}"/><path d="M35 51h10" stroke="${c.e}" stroke-width="2" stroke-linecap="round"/>`,
     `<rect x="15" y="31" width="7" height="15" rx="2" fill="${c.d}"/><rect x="58" y="31" width="7" height="15" rx="2" fill="${c.d}"/><circle cx="40" cy="38" r="19" fill="${c.f}"/><rect x="27" y="31" width="26" height="13" rx="6.5" fill="${c.e}"/><circle cx="34" cy="37.5" r="2.6" fill="${c.g}"/><circle cx="46" cy="37.5" r="2.6" fill="${c.g}"/><path d="M34 49h12" stroke="${c.d}" stroke-width="2" stroke-linecap="round"/>`,
     `<path d="M22 40c0-15 8-23 18-23s18 8 18 23v5c0 9-8 13-18 13s-18-4-18-13Z" fill="${c.f}"/><rect x="20" y="31" width="40" height="11" rx="5.5" fill="${c.e}"/><rect x="25" y="34" width="30" height="3" rx="1.5" fill="${c.g}" opacity=".85"/><path d="M33 51h14" stroke="${c.d}" stroke-width="2" stroke-linecap="round"/>`,
-    `<path d="M40 22v-8" stroke="${c.d}" stroke-width="2.5"/><circle cx="40" cy="12" r="3.2" fill="#F59E0B"/><rect x="21" y="22" width="38" height="35" rx="9" fill="${c.f}"/><rect x="28" y="32" width="9" height="7" rx="2.5" fill="${c.e}"/><rect x="43" y="32" width="9" height="7" rx="2.5" fill="${c.e}"/><circle cx="32.5" cy="35.5" r="1.6" fill="${c.g}"/><circle cx="47.5" cy="35.5" r="1.6" fill="${c.g}"/><rect x="31" y="46" width="18" height="4" rx="2" fill="${c.e}"/>`
+    `<path d="M40 22v-8" stroke="${c.d}" stroke-width="2.5"/><circle cx="40" cy="12" r="3.2" fill="#C8A45D"/><rect x="21" y="22" width="38" height="35" rx="9" fill="${c.f}"/><rect x="28" y="32" width="9" height="7" rx="2.5" fill="${c.e}"/><rect x="43" y="32" width="9" height="7" rx="2.5" fill="${c.e}"/><circle cx="32.5" cy="35.5" r="1.6" fill="${c.g}"/><circle cx="47.5" cy="35.5" r="1.6" fill="${c.g}"/><rect x="31" y="46" width="18" height="4" rx="2" fill="${c.e}"/>`
   ];
   return `<svg viewBox="0 0 80 90" preserveAspectRatio="xMidYMax meet" aria-hidden="true"><path d="M6 90c2-17 15-24 34-24s32 7 34 24Z" fill="${c.d}"/><rect x="33" y="55" width="14" height="13" fill="${c.d}"/>${heads[i%4]}</svg>`;
 }
@@ -217,6 +227,100 @@ function bumpScan(result){
   if(result.status==='fail')s.row.classList.add('has-fail');
 }
 
+/* ---------- court transcripts (live agent dialogue) ---------- */
+let transcript={panes:{},pending:{},count:0,active:null,follow:true};
+const T_ROLES={
+  juror_prompt:'JUROR → MODEL',juror_reply:'MODEL → JUROR',
+  target_prompt:'JUROR → DEFENDANT',target_reply:'DEFENDANT → JUROR',error:'CALL FAILED'};
+function prettyMaybeJSON(text){
+  try{const v=JSON.parse(text);return typeof v==='object'&&v!==null?JSON.stringify(v,null,2):text;}catch{return text;}
+}
+function setTranscriptFollow(on){
+  transcript.follow=on;const t=el('transcript-follow');
+  t.classList.toggle('on',on);t.setAttribute('aria-checked',String(on));
+  if(on&&transcript.active)scrollTranscript();
+}
+function scrollTranscript(){const b=el('transcript-body');b.scrollTop=b.scrollHeight;}
+function showTranscriptTab(agent){
+  transcript.active=agent;
+  for(const [n,p] of Object.entries(transcript.panes)){
+    const on=Number(n)===agent;p.pane.hidden=!on;p.tab.classList.toggle('active',on);p.tab.setAttribute('aria-selected',String(on));
+  }
+}
+function resetTranscript(){
+  transcript={panes:{},pending:{},count:0,active:null,follow:transcript.follow};
+  el('transcript-tabs').replaceChildren();
+  el('transcript-body').replaceChildren(textNode('p','• Waiting for the first juror prompt…','transcript-empty mono'));
+  el('transcript-count').textContent='0 messages';
+}
+function transcriptPane(agent,model){
+  let p=transcript.panes[agent];
+  if(!p){
+    const body=el('transcript-body');
+    if(!Object.keys(transcript.panes).length)body.replaceChildren();
+    const tab=document.createElement('button');tab.type='button';tab.className='t-tab';tab.setAttribute('role','tab');
+    append(tab,textNode('span','','t-live'),textNode('span',`RED TEAM AGENT ${agent}`),textNode('span','','t-model'),textNode('b','0'));
+    tab.addEventListener('click',()=>{setTranscriptFollow(false);showTranscriptTab(agent);});
+    const pane=textNode('div','','t-pane');pane.setAttribute('role','tabpanel');
+    el('transcript-tabs').appendChild(tab);body.appendChild(pane);
+    p=transcript.panes[agent]={tab,pane,n:0};
+    if(transcript.active===null)showTranscriptTab(agent);else pane.hidden=true;
+  }
+  if(model)p.tab.querySelector('.t-model').textContent=`· ${model}`;
+  return p;
+}
+function transcriptBlock(label,text,open=true){
+  const d=document.createElement('details');d.open=open;
+  append(d,textNode('summary',label),textNode('pre',text,'t-text'));
+  return d;
+}
+function renderDialogue(m){
+  const isPrompt=m.role==='juror_prompt'||m.role==='target_prompt';
+  const p=transcriptPane(m.agent,m.role.startsWith('juror')?m.model:null);
+  const box=textNode('div','',`t-msg ${m.role}`);
+  const head=textNode('div','','t-head');
+  const bits=[T_ROLES[m.role]||m.role];
+  append(head,textNode('span',bits[0],'t-dir'));
+  if(m.purpose)head.appendChild(textNode('span',m.purpose));
+  if(m.case)head.appendChild(textNode('span',m.case));
+  if(m.role==='juror_prompt')head.appendChild(textNode('span',`temp ${m.temperature} · max ${m.max_tokens} tok`));
+  if(m.role==='target_prompt'&&m.tools?.length)head.appendChild(textNode('span',`tools offered: ${m.tools.join(', ')}`));
+  head.appendChild(textNode('span',new Date(m.timestamp).toLocaleTimeString(),'t-time'));
+  box.appendChild(head);
+  if(isPrompt){
+    for(const msg of m.messages||[]){
+      const sys=msg.role==='system';
+      box.appendChild(transcriptBlock(`${msg.role.toUpperCase()} PROMPT`,prettyMaybeJSON(String(msg.content)),!sys));
+    }
+  }else{
+    box.appendChild(textNode('pre',m.role==='error'?m.text:prettyMaybeJSON(String(m.text||''))||'(no text)','t-text'));
+    if(m.tool_calls?.length)
+      box.appendChild(textNode('pre',`Tool calls proposed (never executed):\n${JSON.stringify(m.tool_calls,null,2)}`,'t-text t-tools'));
+  }
+  // A prompt shows a live "awaiting" line until its reply (matched by seq) replaces it.
+  const waiting=m.reply_to&&transcript.pending[m.reply_to];
+  if(waiting){waiting.replaceWith(box);delete transcript.pending[m.reply_to];}
+  else p.pane.appendChild(box);
+  if(isPrompt){
+    const w=textNode('div',m.role==='juror_prompt'?'Awaiting juror model reply':'Awaiting defendant reply','t-msg t-pending');
+    p.pane.appendChild(w);transcript.pending[m.seq]=w;
+  }
+  p.tab.classList.toggle('busy',isPrompt);
+  p.n++;p.tab.querySelector('b').textContent=String(p.n);
+  transcript.count++;el('transcript-count').textContent=`${transcript.count} message${transcript.count===1?'':'s'}`;
+  if(transcript.follow){showTranscriptTab(m.agent);scrollTranscript();}
+}
+function setupTranscript(){
+  const t=el('transcript-follow');
+  t.addEventListener('click',()=>setTranscriptFollow(!transcript.follow));
+  t.addEventListener('keydown',e=>{if(e.key===' '||e.key==='Enter'){e.preventDefault();setTranscriptFollow(!transcript.follow);}});
+}
+function finishTranscript(){
+  for(const w of Object.values(transcript.pending))w.remove();
+  transcript.pending={};
+  for(const p of Object.values(transcript.panes))p.tab.classList.remove('busy');
+}
+
 /* ---------- health ---------- */
 async function refreshHealth(){
   const res=await fetch('/api/health',{cache:'no-store'});
@@ -252,7 +356,7 @@ async function initialize(){
     document.querySelectorAll('.pill').forEach(x=>x.classList.toggle('active',x===p));
     applyFilter();
   }));
-  setupDropzone();setupScrollSpy();setupModeSwitch();renderJury();resetScan();
+  setupDropzone();setupScrollSpy();setupModeSwitch();setupVerdictSwitch();setupTranscript();renderJury();resetScan();
   try{
     await refreshHealth();
     setInterval(()=>{if(running||document.hidden)return;refreshHealth().catch(markOffline);},5000);
@@ -294,7 +398,7 @@ async function submitAssessment(event){
   running=true;report=null;el('run-button').disabled=true;el('run-text').textContent='TRIAL IN SESSION…';
   setTrialStatus('busy');setExportEnabled(false);
   clearVerdict();
-  el('live-events').replaceChildren();resetScan();setProgress(0);renderJury();
+  el('live-events').replaceChildren();resetScan();resetTranscript();setProgress(0);renderJury();
   el('progress-message').textContent='Uploading the defendant…';
   log('Scan initiated… [PASS]','pass');
   try{
@@ -302,9 +406,9 @@ async function submitAssessment(event){
     const chosen=selectedAgents();
     trialSeats=chosen.map(a=>hostedAgents.indexOf(a)+1);
     const payload={target:{model_id:uploadedModel.model_id},authorized:true,strategy:'red_team',
-                   agents:chosen.map(a=>a.file||a.name),mode:trialMode()};
+                   agents:chosen.map(a=>a.file||a.name),mode:trialMode(),verdict:verdictMode()};
     lockModeSwitch(true);
-    log(`${trialMode()==='quick'?'Quick':'Full'} trial · ${chosen.length} juror${chosen.length===1?'':'s'}`,'info');
+    log(`${trialMode()==='quick'?'Quick':'Full'} trial · ${verdictMode()==='ai'?'AI-based':'Rule-based'} verdicts · ${chosen.length} juror${chosen.length===1?'':'s'}`,'info');
     el('progress-message').textContent='Convening the jury…';
     const response=await fetch('/api/run',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
     if(!response.ok){let msg=`Assessment request failed: HTTP ${response.status}`;
@@ -324,7 +428,7 @@ async function submitAssessment(event){
     setTrialStatus(agentsReady?'idle':'offline');
     el('arena').scrollIntoView({behavior:'smooth'});
   }finally{
-    stopClock();
+    stopClock();finishTranscript();
     running=false;el('run-button').disabled=!agentsReady||!selectedAgents().length;el('run-text').textContent='INITIATE PEN-TEST / PUT ON TRIAL';
     document.querySelectorAll('.j-check').forEach(b=>{b.disabled=false;});
     lockModeSwitch(false);
@@ -333,7 +437,9 @@ async function submitAssessment(event){
   }
 }
 function handleEvent(message){
-  if(message.type==='status'){
+  if(message.type==='dialogue'){
+    renderDialogue(message);
+  }else if(message.type==='status'){
     el('progress-message').textContent=message.message;activateJuror(message.message);
     log(message.message,'info');
   }else if(message.type==='start'){
@@ -351,7 +457,10 @@ function handleEvent(message){
     setProgress(Math.round(message.completed/message.total*100));
     bumpScan(r);
     const j=juror(r.agent);if(j){j.classList.add('done');if(r.status==='fail')j.classList.add('flagged');}
-    log(`${r.id} · ${r.title} [${r.status.toUpperCase()}]`,r.status);
+    const why=r.skip_cause==='juror'?` · juror ${r.agent_model} could not write a valid attack`
+      :r.skip_cause==='verdict'?` · inconclusive, juror ${r.agent_model} gave no usable verdict`
+      :r.skip_cause==='target'?' · defendant did not respond':'';
+    log(`${r.id} · ${r.title}${why} [${r.status.toUpperCase()}]`,r.status);
   }else if(message.type==='communication'){
     el('progress-message').textContent=`${message.message.agent} shared a finding with the jury`;
     log(`${message.message.agent} → jury: shared finding`,'info');
@@ -363,6 +472,10 @@ function handleEvent(message){
     report=message.report;stopClock(report.duration_s);renderReport(report);setProgress(100);
     const outcome = report.complete ? 'Assessment complete' : 'Assessment incomplete';
     el('progress-message').textContent = outcome;
+    for(const j of report.juror_reliability||[]){
+      if(j.juror_failures)log(`${j.agent} (${j.model}) failed to produce ${j.juror_failures} of ${j.probes} attacks · weak red-team juror [SKIPPED]`,'skipped');
+      if(j.verdict_failures)log(`${j.agent} (${j.model}) gave no usable verdict on ${j.verdict_failures} of ${j.probes} probes · inconclusive [SKIPPED]`,'skipped');
+    }
     log(outcome, report.complete ? 'info' : 'skipped');
     el('results-complete').classList.remove('hidden');
     setExportEnabled(true);
@@ -385,7 +498,7 @@ function renderReport(data){
   const sub=el('score-label');
   sub.textContent=data.score===null?'PARTIAL':(failed?'FAIL':'PASS');
   sub.className=data.score===null?'':(failed?'fail':'pass');
-  el('score-ring').style.background=`conic-gradient(var(--gold) ${((data.score??data.measured_score??0)/100)*360}deg,#1A2A40 0deg)`;
+  el('score-ring').style.background=`conic-gradient(var(--gold) ${((data.score??data.measured_score??0)/100)*360}deg,#2A241D 0deg)`;
   el('m-grade').textContent=data.grade??'WITHHELD';
   el('m-risk').textContent=riskLevel(data.score,data.findings);
   el('stat-findings').textContent=`${data.findings}/${data.tested}`;
@@ -509,7 +622,12 @@ function renderEvidence(data){
     const detail=textNode('details','',`finding ${test.status}`);
     const summary=textNode('summary','','finding-summary');
     const middle=textNode('span','','finding-title');
-    append(middle,textNode('strong',test.title),textNode('small',`${test.agent||'Juror'} · ${test.id} · ${(names[test.category]||{}).title||test.category} · ${test.duration_ms}ms${test.generated_by_ai?' · AI-generated':''}`));
+    const decided=test.decided_by==='juror'?' · AI verdict':test.decided_by==='both'?' · rule + AI agree'
+      :test.verdict_mode==='ai'?(!test.juror_verdict?' · rule verdict (exact check)'
+        :test.skip_cause==='verdict'?' · inconclusive (juror verdict unavailable)'
+        :test.juror_verdict.verdict?' · rule evidence (final)':' · rule evidence (final, juror unavailable)')
+      :test.verdict_mode?' · rule verdict':'';
+    append(middle,textNode('strong',test.title),textNode('small',`${test.agent||'Juror'} · ${test.id} · ${(names[test.category]||{}).title||test.category} · ${test.duration_ms}ms${test.generated_by_ai?' · AI-generated':''}${decided}`));
     append(summary,textNode('span',{pass:'✓',fail:'!',skipped:'–'}[test.status],'finding-symbol'),middle,
       textNode('span',test.status==='fail'?'FAIL':test.status.toUpperCase(),'finding-status'),textNode('span','›','finding-caret'));
     detail.appendChild(summary);
@@ -518,7 +636,13 @@ function renderEvidence(data){
     const cells=textNode('div','','evidence-grid');
     [['System-level test policy',test.system_prompt],['Attack prompt submitted',test.attack_prompt],
      ['Target model response',test.response||'(No text returned)'],['Proposed tool calls',JSON.stringify(test.tool_calls,null,2)||'[]'],
-     ['Red-team model and attack reasoning',`${test.agent_model||''} — ${test.rationale||'(not provided)'}`]
+     ['Red-team model and attack reasoning',`${test.agent_model||''} — ${test.rationale||'(not provided)'}`],
+     ...(test.juror_verdict?[['Juror assessment',[
+        `Verdict: ${test.juror_verdict.verdict?test.juror_verdict.verdict.toUpperCase():'UNAVAILABLE'}`,
+        `Rule-based check: ${(test.rule_status||'').toUpperCase()} · ${test.rule_reason||''}`,
+        test.juror_verdict.attempted_violation?`Attempted violation: ${test.juror_verdict.attempted_violation}`:'',
+        test.juror_verdict.evidence?`Evidence: ${test.juror_verdict.evidence}`:'',
+        `Reasoning: ${test.juror_verdict.reasoning||'(none)'}`].filter(Boolean).join('\n')]]:[])
     ].forEach(([heading,content])=>{
       const cell=textNode('div','','evidence-cell');const caption=textNode('label',heading);
       const btn=textNode('button','COPY','copy-mini');btn.type='button';
@@ -560,7 +684,7 @@ function resetTrial(){
   clearVerdict();
   el('report-search').value='';reportFilter='all';
   document.querySelectorAll('.pill').forEach(p=>p.classList.toggle('active',p.dataset.filter==='all'));
-  el('live-events').replaceChildren(textNode('li','• Court in session. Awaiting trial…'));
+  el('live-events').replaceChildren(textNode('li','• Court in session. Awaiting trial…'));resetTranscript();
   resetScan();setProgress(0);el('progress-message').textContent='Standing by.';
   renderJury();setTrialStatus(agentsReady?'idle':'offline');
   el('arena').scrollIntoView({behavior:'smooth',block:'start'});

@@ -8,7 +8,8 @@ import socketserver
 import threading
 import urllib.parse
 from pathlib import Path
-from courthouse import assess_stream
+from courthouse import (assess_stream, now, ATTACK_SCHEMA, INDIVIDUAL_SCHEMA, MESSAGE_SCHEMA,
+                        SUMMARY_SCHEMA, VERDICT_SCHEMA, VERDICT_MODES)
 from local_engine import (save_upload, validate_hosted_assessment, initialize_hosted_agents,
                           hosted_status, run_local, chat_uploaded, MAX_BYTES)
 
@@ -104,6 +105,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
             mode = request.get('mode', 'full')
             if mode not in ('quick', 'full'):
                 raise ValueError('mode must be "quick" or "full".')
+            verdict = request.get('verdict', 'rule')
+            if verdict not in VERDICT_MODES:
+                raise ValueError('verdict must be "rule" or "ai".')
             target_id = str((request.get('target') or {}).get('model_id', ''))
             target, agent_infos = validate_hosted_assessment(target_id, request.get('agents'))
             try:
@@ -118,10 +122,51 @@ class Handler(http.server.BaseHTTPRequestHandler):
         labels = [info['file'] for info in agent_infos]
         label_to_id = {label: info['model_id'] for label, info in zip(labels, agent_infos)}
 
+        def emit(event):
+            line = (json.dumps(event, ensure_ascii=False) + '\n').encode('utf8')
+            self.wfile.write(f'{len(line):X}\r\n'.encode() + line + b'\r\n')
+            self.wfile.flush()
+
+        # Live transcript: every exact prompt/reply between jurors and the target is streamed
+        # as a 'dialogue' event before and after each inference call (same thread as emit).
+        purposes = {id(ATTACK_SCHEMA): 'attack generation', id(INDIVIDUAL_SCHEMA): 'individual report',
+                    id(MESSAGE_SCHEMA): 'jury message', id(SUMMARY_SCHEMA): 'joint summary',
+                    id(VERDICT_SCHEMA): 'verdict'}
+        seq = [0]
+
+        def dialogue(agent, role, **fields):
+            seq[0] += 1
+            emit({'type': 'dialogue', 'agent': agent, 'role': role, 'seq': seq[0], 'timestamp': now(), **fields})
+            return seq[0]
+
         def local_chat(label, messages, temperature, max_tokens, schema=None):
             # Actual inference on the corresponding server-hosted red-team GGUF weights.
-            return chat_uploaded(label_to_id[label], messages, temperature, max_tokens, schema=schema,
-                                 quick=mode == 'quick')
+            agent = labels.index(label) + 1
+            ref = dialogue(agent, 'juror_prompt', model=label, purpose=purposes.get(id(schema), 'juror call'),
+                           messages=messages, temperature=temperature, max_tokens=max_tokens)
+            try:
+                text = chat_uploaded(label_to_id[label], messages, temperature, max_tokens, schema=schema,
+                                     quick=mode == 'quick')
+            except Exception as exc:
+                dialogue(agent, 'error', reply_to=ref, model=label, text=f'{type(exc).__name__}: {exc}')
+                raise
+            dialogue(agent, 'juror_reply', reply_to=ref, model=label, text=text)
+            return text
+
+        def run_target(case):
+            agent = int(case.id.split('-', 1)[0])
+            ref = dialogue(agent, 'target_prompt', model=target['name'], case=case.id,
+                           messages=[{'role': 'system', 'content': case.system},
+                                     {'role': 'user', 'content': case.attack}],
+                           tools=[t['function']['name'] for t in case.tools])
+            try:
+                response = run_local(case, target_id)
+            except Exception as exc:
+                dialogue(agent, 'error', reply_to=ref, model=target['name'], text=f'{type(exc).__name__}: {exc}')
+                raise
+            dialogue(agent, 'target_reply', reply_to=ref, model=target['name'], case=case.id,
+                     text=response.get('content', ''), tool_calls=response.get('tool_calls') or [])
+            return response
 
         try:
             self.send_response(200)
@@ -130,14 +175,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self.headers_security()
             self.end_headers()
 
-            def emit(event):
-                line = (json.dumps(event, ensure_ascii=False) + '\n').encode('utf8')
-                self.wfile.write(f'{len(line):X}\r\n'.encode() + line + b'\r\n')
-                self.wfile.flush()
-
             try:
                 for event in assess_stream(target_id, target['name'], target['sha256'],
-                         labels, local_chat, lambda case: run_local(case, target_id), mode=mode):
+                         labels, local_chat, run_target, mode=mode, verdict=verdict):
                     emit(event)
             except Exception as exc:
                 emit({'type':'error', 'message':f'Courthouse assessment interrupted: {type(exc).__name__}: {str(exc)[:220]}'})

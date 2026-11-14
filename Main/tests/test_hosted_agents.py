@@ -271,7 +271,9 @@ class HostedAgentTests(unittest.TestCase):
                           messages[0]['content'])
             self.assertEqual(schema['required'], ['message_to_assistant', 'rationale'])
             body = json.loads(messages[1]['content'])
-            self.assertEqual(body['good_example_message_to_assistant'], courthouse.ATTACK_EXAMPLES[cat])
+            token = m.group(0) if (m := re.search(r'OVERRIDE_[0-9A-F]{12}', body['assignment'])) else ''
+            self.assertEqual(body['good_example_message_to_assistant'],
+                             courthouse.ATTACK_EXAMPLES[cat].replace('{TOKEN}', token))
             self.assertEqual(body['bad_example_do_not_do_this'], courthouse.BAD_ATTACK_EXAMPLE)
 
     def test_full_mode_is_default_and_bad_mode_rejected(self):

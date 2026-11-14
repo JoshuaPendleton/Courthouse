@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" content="#08101E" />
+  <meta name="theme-color" content="#15120F" />
   <meta name="description" content="Courthouse — authorized local AI model red-team assessment and evidence reporting." />
   <title>Courthouse — AI Pen-Test Command Center</title>
   <link rel="stylesheet" href="/style.css" />
@@ -62,6 +62,12 @@
               <label><input type="radio" name="trial-mode" value="full" /><span>FULL</span></label>
               <small id="mode-hint">4 tests per judge · independent reports · 2 min target</small>
             </fieldset>
+            <fieldset class="mode-switch" id="verdict-switch">
+              <legend>Verdict method</legend>
+              <label><input type="radio" name="verdict-mode" value="rule" checked /><span>RULE-BASED</span></label>
+              <label><input type="radio" name="verdict-mode" value="ai" /><span>AI-BASED</span></label>
+              <small id="verdict-hint">Fixed code checks decide PASS/FAIL</small>
+            </fieldset>
             <label class="consent-line"><input type="checkbox" id="authorization" /><span>I own or am authorized to test this model.</span></label>
             <button class="cta" type="submit" id="run-button" disabled><span id="run-text">INITIATE PEN-TEST / PUT ON TRIAL</span></button>
           </div>
@@ -107,6 +113,18 @@
         <div class="progress-track"><div id="progress-fill"></div></div>
         <div class="mono trial-time" id="trial-time" hidden>Elapsed <b role="timer" id="trial-elapsed">00:00</b> · Target <span id="trial-target"></span></div>
         <p class="mono progress-msg" id="progress-message">Standing by.</p>
+      </div>
+
+      <div class="logs-panel transcript-panel">
+        <div class="panel-head">
+          <h2>COURT TRANSCRIPTS / LIVE AGENT DIALOGUE</h2>
+          <span class="mono progress-pct" id="transcript-count">0 messages</span>
+          <span class="toggle on" id="transcript-follow" role="switch" aria-checked="true" tabindex="0" title="Auto-scroll to newest message"><span class="knob"></span></span>
+        </div>
+        <div class="transcript-tabs mono" id="transcript-tabs" role="tablist"></div>
+        <div class="transcript-body" id="transcript-body">
+          <p class="transcript-empty mono">• Exact prompts and replies between each juror and the defendant appear here once the trial starts.</p>
+        </div>
       </div>
     </section>
 

@@ -84,8 +84,46 @@ def scan_hosted_ggufs():
     return found
 
 
+_UPLOAD_BY_SHA: dict[str, str] = {}   # sha256 -> model_id of the file kept in models/uploads
+_UPLOADS_INDEXED = False
+
+
+def _index_uploads():
+    """Register target GGUFs already in models/uploads (e.g. from before a restart), once per process.
+
+    The file stem becomes the model_id, so re-uploading the same weights later reuses that file
+    instead of writing another copy.
+    """
+    global _UPLOADS_INDEXED
+    if _UPLOADS_INDEXED:
+        return
+    found = []
+    for path in sorted(UPLOAD_DIR.glob('*.gguf')):
+        if path.name.startswith('.') or path.is_symlink() or not path.is_file():
+            continue
+        try:
+            _check_gguf_file(path)
+            found.append((path, _digest(path)))
+        except (OSError, ValueError):
+            continue
+    with _LOCK:
+        for path, sha in found:
+            model_id = path.stem
+            if sha in _UPLOAD_BY_SHA or (model_id in REGISTRY and REGISTRY[model_id].get('path') != path):
+                continue
+            REGISTRY[model_id] = {'model_id': model_id, 'name': path.name, 'path': path, 'sha256': sha,
+                                  'size': path.stat().st_size, 'source': 'uploaded_target'}
+            _UPLOAD_BY_SHA[sha] = model_id
+        _UPLOADS_INDEXED = True
+
+
 def save_upload(stream, length, filename):
-    """Save an untrusted target GGUF without executing it; check name/size/header."""
+    """Save an untrusted target GGUF without executing it; check name/size/header.
+
+    Identical weights (same SHA-256) are stored once: a repeat upload is discarded and the
+    existing file's model_id is returned.
+    """
+    _index_uploads()
     if not 8 <= length <= MAX_BYTES:
         raise ValueError('GGUF target file exceeds the configured limit or is too small.')
     if (not filename.lower().endswith('.gguf') or '/' in filename or '\\' in filename
@@ -109,10 +147,16 @@ def save_upload(stream, length, filename):
                 out.write(buf)
                 digest.update(buf)
                 remaining -= len(buf)
-        info = {'model_id':model_id,'name':filename,'path':path,
-                'sha256':digest.hexdigest(),'size':length,'source':'uploaded_target'}
+        sha = digest.hexdigest()
         with _LOCK:
+            existing = REGISTRY.get(_UPLOAD_BY_SHA.get(sha, ''))
+            if existing and existing['path'].is_file():
+                path.unlink(missing_ok=True)   # duplicate of weights we already hold
+                return {**{k: v for k, v in existing.items() if k != 'path'}, 'name': filename, 'reused': True}
+            info = {'model_id':model_id,'name':filename,'path':path,
+                    'sha256':sha,'size':length,'source':'uploaded_target'}
             REGISTRY[model_id]=info
+            _UPLOAD_BY_SHA[sha]=model_id
         return {k:v for k,v in info.items() if k!='path'}
     except Exception:
         path.unlink(missing_ok=True)
@@ -120,6 +164,8 @@ def save_upload(stream, length, filename):
 
 
 def get_model_info(model_id):
+    if model_id not in REGISTRY:
+        _index_uploads()
     return REGISTRY.get(model_id)
 
 
@@ -237,6 +283,8 @@ def validate_hosted_assessment(target_id, selected=None):
     only those hosted agents take part (in their models/agents order).
     """
     refresh_hosted_agents_if_changed()
+    if target_id not in REGISTRY:
+        _index_uploads()
     with _LOCK:
         if not HOSTED_STATUS.get('ready') or len(HOSTED_AGENTS) < 1:
             raise ValueError('Courthouse agents are not ready: '+HOSTED_STATUS.get('error','check server model setup'))
